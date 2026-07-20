@@ -1,4 +1,4 @@
-package com.VyntraShopService.entity;
+package com.x.shop.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

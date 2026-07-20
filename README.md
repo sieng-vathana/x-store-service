@@ -1,4 +1,4 @@
-# Vyntra Shop Service
+# X Shop Service
 
 This service owns Vyntra selling locations.
 

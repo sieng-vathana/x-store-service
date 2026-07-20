@@ -1,6 +1,6 @@
-package com.VyntraShopService.repository;
+package com.x.shop.repository;
 
-import com.VyntraShopService.entity.Shop;
+import com.x.shop.entity.Shop;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

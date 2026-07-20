@@ -3,6 +3,6 @@ server:
 
 spring:
   application:
-    name: Vyntra-Shop-Service
+    name: X-Shop-Service
   profiles:
     default: local

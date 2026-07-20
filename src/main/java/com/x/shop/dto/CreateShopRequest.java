@@ -1,4 +1,4 @@
-package com.VyntraShopService.dto;
+package com.x.shop.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

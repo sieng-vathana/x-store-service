@@ -1,4 +1,4 @@
-package com.VyntraShopService.dto;
+package com.x.shop.dto;
 
 import java.time.LocalDateTime;
 

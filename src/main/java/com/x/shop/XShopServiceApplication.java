@@ -1,12 +1,12 @@
-package com.VyntraShopService;
+package com.x.shop;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class VyntraShopServiceApplication {
+public class XShopServiceApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(VyntraShopServiceApplication.class, args);
+        SpringApplication.run(XShopServiceApplication.class, args);
     }
 }

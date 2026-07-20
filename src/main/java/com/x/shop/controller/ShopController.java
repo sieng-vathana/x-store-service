@@ -1,8 +1,8 @@
-package com.VyntraShopService.controller;
+package com.x.shop.controller;
 
-import com.VyntraShopService.dto.CreateShopRequest;
-import com.VyntraShopService.dto.ShopResponse;
-import com.VyntraShopService.service.ShopService;
+import com.x.shop.dto.CreateShopRequest;
+import com.x.shop.dto.ShopResponse;
+import com.x.shop.service.ShopService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;

@@ -11,10 +11,10 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.VyntraShopService</groupId>
-    <artifactId>Vyntra-Shop-Service</artifactId>
+    <groupId>com.x</groupId>
+    <artifactId>x-shop-service</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>Vyntra-Shop-Service</name>
+    <name>X-Shop-Service</name>
     <description>Manage selling locations owned by a Vyntra business</description>
 
     <properties>

@@ -1,9 +1,9 @@
-package com.VyntraShopService.service;
+package com.x.shop.service;
 
-import com.VyntraShopService.dto.CreateShopRequest;
-import com.VyntraShopService.dto.ShopResponse;
-import com.VyntraShopService.entity.Shop;
-import com.VyntraShopService.repository.ShopRepository;
+import com.x.shop.dto.CreateShopRequest;
+import com.x.shop.dto.ShopResponse;
+import com.x.shop.entity.Shop;
+import com.x.shop.repository.ShopRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
