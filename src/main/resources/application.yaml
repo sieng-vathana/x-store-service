@@ -3,6 +3,6 @@ server:
 
 spring:
   application:
-    name: X-Shop-Service
+    name: x-shop-service
   profiles:
     default: local

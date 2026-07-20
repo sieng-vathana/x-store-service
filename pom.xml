@@ -14,8 +14,8 @@
     <groupId>com.x</groupId>
     <artifactId>x-shop-service</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>X-Shop-Service</name>
-    <description>Manage selling locations owned by a Vyntra business</description>
+    <name>x-shop-service</name>
+    <description>x-shop-service</description>
 
     <properties>
         <java.version>17</java.version>
