@@ -12,10 +12,10 @@
     </parent>
 
     <groupId>com.x</groupId>
-    <artifactId>x-shop-service</artifactId>
+    <artifactId>x-store-service</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>x-shop-service</name>
-    <description>x-shop-service</description>
+    <name>x-store-service</name>
+    <description>x-store-service</description>
 
     <properties>
         <java.version>17</java.version>
