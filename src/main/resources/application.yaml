@@ -1,12 +1,12 @@
 server:
-  port: ${SHOP_SERVICE_PORT:8087}
+  port: ${STORE_SERVICE_PORT:8087}
 
 spring:
   banner:
     location: classpath:banner.txt
     mode: console
   application:
-    name: x-shop-service
+    name: x-store-service
   profiles:
     default: local
 
@@ -14,7 +14,7 @@ x:
   http:
     logging:
       enabled: true
-      server: x-shop-service
-      hop: "x-api-gateway → x-bff → x-shop-service"
+      server: x-store-service
+      hop: "x-api-gateway → x-bff → x-store-service"
       hops:
-        /api/v1/shops: "x-api-gateway → x-bff → x-shop-service"
+        /api/v1/stores: "x-api-gateway → x-bff → x-store-service"

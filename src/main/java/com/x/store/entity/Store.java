@@ -1,4 +1,4 @@
-package com.x.shop.entity;
+package com.x.store.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -16,19 +16,20 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 @Entity
 @Table(
-        name = "shops",
+        name = "stores",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_shop_business_code",
+                name = "uk_store_business_code",
                 columnNames = {"business_id", "code"}))
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Shop {
+public class Store {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -42,6 +43,45 @@ public class Shop {
 
     @Column(nullable = false, length = 64)
     private String code;
+
+    @Column(name = "address_line_1", nullable = false, length = 255)
+    private String addressLine1;
+
+    @Column(name = "address_line_2", length = 255)
+    private String addressLine2;
+
+    @Column(length = 255)
+    private String landmark;
+
+    @Column(nullable = false, length = 100)
+    private String city;
+
+    @Column(name = "state_province", length = 100)
+    private String stateProvince;
+
+    @Column(name = "country_code", nullable = false, length = 2)
+    private String countryCode;
+
+    @Column(name = "postal_code", length = 20)
+    private String postalCode;
+
+    @Column(length = 32)
+    private String phone;
+
+    @Column(name = "alternate_phone", length = 32)
+    private String alternatePhone;
+
+    @Column(length = 254)
+    private String email;
+
+    @Column(length = 255)
+    private String website;
+
+    @Column(precision = 10, scale = 7)
+    private BigDecimal latitude;
+
+    @Column(precision = 10, scale = 7)
+    private BigDecimal longitude;
 
     @Column(nullable = false)
     private Integer status;
