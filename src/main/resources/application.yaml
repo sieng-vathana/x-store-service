@@ -9,6 +9,10 @@ spring:
     name: x-store-service
   profiles:
     default: local
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
 
 x:
   http:
@@ -18,3 +22,10 @@ x:
       hop: "x-api-gateway → x-bff → x-store-service"
       hops:
         /api/v1/stores: "x-api-gateway → x-bff → x-store-service"
+  redis:
+    enabled: ${X_REDIS_ENABLED:true}
+    key-prefix: x
+    default-ttl: 10m
+    caches:
+      store-by-id: 15m
+      stores-by-business: 5m
