@@ -4,7 +4,9 @@ import com.x.store.dto.CreateStoreRequest;
 import com.x.store.dto.StoreImageRequest;
 import com.x.store.entity.Store;
 import com.x.store.repository.StoreRepository;
+import com.x.redis.cache.CacheNames;
 import org.junit.jupiter.api.Test;
+import org.springframework.cache.annotation.Cacheable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -14,6 +16,16 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 
 class StoreServiceTest {
+
+    @Test
+    void cachesStorePagesByBusinessAndPagination() throws NoSuchMethodException {
+        Cacheable cacheable = StoreService.class
+                .getMethod("getByBusiness", Long.class, int.class, int.class)
+                .getAnnotation(Cacheable.class);
+
+        assertEquals(List.of(CacheNames.STORES_BY_BUSINESS), List.of(cacheable.cacheNames()));
+        assertEquals("#businessId + ':' + #page + ':' + #size", cacheable.key());
+    }
 
     @Test
     void createNormalizesCodeAndKeepsBusinessReference() {

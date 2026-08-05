@@ -31,7 +31,7 @@ public class StoreService {
 
     private final StoreRepository storeRepository;
 
-    @CacheEvict(cacheNames = CacheNames.STORES_BY_BUSINESS, key = "#request.businessId()")
+    @CacheEvict(cacheNames = CacheNames.STORES_BY_BUSINESS, allEntries = true)
     @Transactional
     public StoreResponse create(CreateStoreRequest request) {
         String code = normalizeCode(request.code());
@@ -148,6 +148,9 @@ public class StoreService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));
     }
 
+    @Cacheable(
+            cacheNames = CacheNames.STORES_BY_BUSINESS,
+            key = "#businessId + ':' + #page + ':' + #size")
     @Transactional(readOnly = true)
     public PageResponse<StoreResponse> getByBusiness(Long businessId, int page, int size) {
         var stores = storeRepository.findAllByBusinessId(businessId,
