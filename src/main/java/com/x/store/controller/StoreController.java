@@ -24,6 +24,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.validation.annotation.Validated;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/stores")
 @RequiredArgsConstructor
@@ -55,6 +57,12 @@ public class StoreController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<StoreResponse>> getById(@PathVariable @Positive Long id) {
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), storeService.getById(id)));
+    }
+
+    @GetMapping("/public")
+    public ResponseEntity<ApiResponse<List<com.x.store.dto.MarketplaceStoreResponse>>> getMarketplaceStores(
+            @RequestParam List<@Positive Long> ids) {
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), storeService.getMarketplaceStores(ids)));
     }
 
     @GetMapping

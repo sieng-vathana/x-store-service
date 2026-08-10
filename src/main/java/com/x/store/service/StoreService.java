@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Collection;
 import java.util.Locale;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -146,6 +147,26 @@ public class StoreService {
         return storeRepository.findById(id)
                 .map(this::toResponse)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.x.store.dto.MarketplaceStoreResponse> getMarketplaceStores(Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return storeRepository.findAllById(ids).stream()
+                .filter(store -> store.getStatus() == null || store.getStatus() == ACTIVE_STATUS)
+                .map(store -> new com.x.store.dto.MarketplaceStoreResponse(
+                        store.getId(), store.getName(), store.getCode(), store.getCity(), store.getCountryCode(),
+                        store.getImages().stream()
+                                .filter(image -> Boolean.TRUE.equals(image.getIsPrimary()))
+                                .map(StoreImage::getImageUrl)
+                                .findFirst()
+                                .orElseGet(() -> store.getImages().stream()
+                                        .map(StoreImage::getImageUrl)
+                                        .findFirst()
+                                        .orElse(null))))
+                .toList();
     }
 
     @Cacheable(
