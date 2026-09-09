@@ -82,6 +82,23 @@ public class Store {
     @Column(nullable = false)
     private Integer status;
 
+    @Column(name = "store_type", length = 64)
+    @Builder.Default
+    private String storeType = "GENERAL_RETAIL";
+
+    @Column(name = "marketplace_status", length = 32)
+    @Builder.Default
+    private String marketplaceStatus = "NOT_LISTED";
+
+    @Column(name = "marketplace_applied_at")
+    private LocalDateTime marketplaceAppliedAt;
+
+    @Column(name = "marketplace_approved_at")
+    private LocalDateTime marketplaceApprovedAt;
+
+    @Column(name = "rejection_reason", length = 500)
+    private String rejectionReason;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

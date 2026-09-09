@@ -10,4 +10,6 @@ public interface StoreRepository extends JpaRepository<Store, Long> {
     boolean existsByBusinessIdAndCode(Long businessId, String code);
 
     Page<Store> findAllByBusinessId(Long businessId, Pageable pageable);
+
+    Page<Store> findAllByMarketplaceStatus(String marketplaceStatus, Pageable pageable);
 }

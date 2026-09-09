@@ -9,6 +9,7 @@ import java.util.List;
 public record UpdateStoreRequest(
         @Size(max = 160, message = "Store name must not exceed 160 characters") String name,
         @Size(max = 64, message = "Store code must not exceed 64 characters") String code,
+        @Size(max = 64, message = "Store type must not exceed 64 characters") String storeType,
         @Size(max = 255, message = "Address line 1 must not exceed 255 characters") String addressLine1,
         @Size(max = 255, message = "Address line 2 must not exceed 255 characters") String addressLine2,
         @Size(max = 255, message = "Landmark must not exceed 255 characters") String landmark,
@@ -24,4 +25,13 @@ public record UpdateStoreRequest(
         BigDecimal longitude,
         List<@jakarta.validation.Valid StoreImageRequest> images,
         Integer status) {
+
+    public UpdateStoreRequest(String name, String code, String addressLine1, String addressLine2,
+                              String landmark, String city, String stateProvince, String countryCode,
+                              String postalCode, String phone, String alternatePhone, String email,
+                              String website, BigDecimal latitude, BigDecimal longitude,
+                              List<StoreImageRequest> images, Integer status) {
+        this(name, code, null, addressLine1, addressLine2, landmark, city, stateProvince,
+                countryCode, postalCode, phone, alternatePhone, email, website, latitude, longitude, images, status);
+    }
 }

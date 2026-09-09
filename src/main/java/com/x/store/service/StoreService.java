@@ -40,10 +40,16 @@ public class StoreService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Store code already exists for this business");
         }
 
+        String storeType = request.storeType() != null && !request.storeType().isBlank()
+                ? request.storeType().trim().toUpperCase(Locale.ROOT)
+                : "GENERAL_RETAIL";
+
         Store store = Store.builder()
                 .businessId(request.businessId())
                 .name(request.name().trim())
                 .code(code)
+                .storeType(storeType)
+                .marketplaceStatus("NOT_LISTED")
                 .addressLine1(request.addressLine1().trim())
                 .addressLine2(trimToNull(request.addressLine2()))
                 .landmark(trimToNull(request.landmark()))
@@ -124,12 +130,67 @@ public class StoreService {
         if (request.status() != null) {
             store.setStatus(request.status());
         }
+        if (request.storeType() != null && !request.storeType().isBlank()) {
+            store.setStoreType(request.storeType().trim().toUpperCase(Locale.ROOT));
+        }
         if (request.images() != null) {
             store.getImages().clear();
             prepareImages(store, request.images());
         }
 
         return toResponse(storeRepository.save(store));
+    }
+
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheNames.STORE_BY_ID, key = "#id"),
+            @CacheEvict(cacheNames = CacheNames.STORES_BY_BUSINESS, allEntries = true)
+    })
+    @Transactional
+    public StoreResponse applyMarketplace(Long id, com.x.store.dto.ApplyMarketplaceRequest request) {
+        Store store = storeRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));
+        if (request != null && request.storeType() != null && !request.storeType().isBlank()) {
+            store.setStoreType(request.storeType().trim().toUpperCase(Locale.ROOT));
+        }
+        store.setMarketplaceStatus("PENDING_REVIEW");
+        store.setMarketplaceAppliedAt(java.time.LocalDateTime.now());
+        store.setRejectionReason(null);
+        return toResponse(storeRepository.save(store));
+    }
+
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheNames.STORE_BY_ID, key = "#id"),
+            @CacheEvict(cacheNames = CacheNames.STORES_BY_BUSINESS, allEntries = true)
+    })
+    @Transactional
+    public StoreResponse approveMarketplace(Long id) {
+        Store store = storeRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));
+        store.setMarketplaceStatus("APPROVED");
+        store.setMarketplaceApprovedAt(java.time.LocalDateTime.now());
+        store.setRejectionReason(null);
+        return toResponse(storeRepository.save(store));
+    }
+
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheNames.STORE_BY_ID, key = "#id"),
+            @CacheEvict(cacheNames = CacheNames.STORES_BY_BUSINESS, allEntries = true)
+    })
+    @Transactional
+    public StoreResponse rejectMarketplace(Long id, com.x.store.dto.ReviewMarketplaceRequest request) {
+        Store store = storeRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));
+        store.setMarketplaceStatus("REJECTED");
+        store.setRejectionReason(request != null ? trimToNull(request.reason()) : null);
+        return toResponse(storeRepository.save(store));
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<StoreResponse> listPendingMarketplace(int page, int size) {
+        var stores = storeRepository.findAllByMarketplaceStatus("PENDING_REVIEW",
+                PageRequest.of(page, size, Sort.by("marketplaceAppliedAt").ascending()));
+        return new PageResponse<>(stores.getContent().stream().map(this::toResponse).toList(),
+                stores.getNumber(), stores.getSize(), stores.getTotalElements(), stores.getTotalPages(), stores.hasNext());
     }
 
     @Caching(evict = {
@@ -155,9 +216,12 @@ public class StoreService {
             return List.of();
         }
         return storeRepository.findAllById(ids).stream()
-                .filter(store -> store.getStatus() == null || store.getStatus() == ACTIVE_STATUS)
+                .filter(store -> (store.getStatus() == null || store.getStatus() == ACTIVE_STATUS)
+                        && "APPROVED".equalsIgnoreCase(store.getMarketplaceStatus()))
                 .map(store -> new com.x.store.dto.MarketplaceStoreResponse(
-                        store.getId(), store.getName(), store.getCode(), store.getCity(), store.getCountryCode(),
+                        store.getId(), store.getName(), store.getCode(),
+                        store.getStoreType() != null ? store.getStoreType() : "GENERAL_RETAIL",
+                        store.getCity(), store.getCountryCode(),
                         store.getImages().stream()
                                 .filter(image -> Boolean.TRUE.equals(image.getIsPrimary()))
                                 .map(StoreImage::getImageUrl)
@@ -216,11 +280,15 @@ public class StoreService {
     private StoreResponse toResponse(Store store) {
         return new StoreResponse(
                 store.getId(), store.getBusinessId(), store.getName(), store.getCode(),
+                store.getStoreType() != null ? store.getStoreType() : "GENERAL_RETAIL",
                 store.getAddressLine1(), store.getAddressLine2(), store.getLandmark(), store.getCity(),
                 store.getStateProvince(), store.getCountryCode(), store.getPostalCode(), store.getPhone(),
                 store.getAlternatePhone(), store.getEmail(), store.getWebsite(), store.getLatitude(),
                 store.getLongitude(), store.getImages().stream()
                         .map(image -> new StoreImageResponse(image.getId(), image.getImageUrl(), image.getIsPrimary(), image.getSortOrder()))
-                        .toList(), store.getStatus(), store.getCreatedAt(), store.getUpdatedAt());
+                        .toList(), store.getStatus(),
+                store.getMarketplaceStatus() != null ? store.getMarketplaceStatus() : "NOT_LISTED",
+                store.getMarketplaceAppliedAt(), store.getMarketplaceApprovedAt(), store.getRejectionReason(),
+                store.getCreatedAt(), store.getUpdatedAt());
     }
 }

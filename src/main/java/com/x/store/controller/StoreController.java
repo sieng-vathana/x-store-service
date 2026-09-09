@@ -65,6 +65,36 @@ public class StoreController {
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), storeService.getMarketplaceStores(ids)));
     }
 
+    @PostMapping("/{id}/marketplace/apply")
+    public ResponseEntity<ApiResponse<StoreResponse>> applyMarketplace(
+            @PathVariable @Positive Long id,
+            @Valid @RequestBody com.x.store.dto.ApplyMarketplaceRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(),
+                "Marketplace application submitted", storeService.applyMarketplace(id, request)));
+    }
+
+    @PostMapping("/{id}/marketplace/approve")
+    public ResponseEntity<ApiResponse<StoreResponse>> approveMarketplace(@PathVariable @Positive Long id) {
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(),
+                "Store approved for marketplace", storeService.approveMarketplace(id)));
+    }
+
+    @PostMapping("/{id}/marketplace/reject")
+    public ResponseEntity<ApiResponse<StoreResponse>> rejectMarketplace(
+            @PathVariable @Positive Long id,
+            @Valid @RequestBody(required = false) com.x.store.dto.ReviewMarketplaceRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(),
+                "Store marketplace application rejected", storeService.rejectMarketplace(id, request)));
+    }
+
+    @GetMapping("/marketplace/pending")
+    public ResponseEntity<ApiResponse<PageResponse<StoreResponse>>> listPendingMarketplace(
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(),
+                storeService.listPendingMarketplace(page, size)));
+    }
+
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<StoreResponse>>> getByBusiness(
             @RequestParam @Positive Long businessId,
