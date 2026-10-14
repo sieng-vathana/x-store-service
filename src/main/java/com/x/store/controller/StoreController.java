@@ -87,12 +87,29 @@ public class StoreController {
                 "Store marketplace application rejected", storeService.rejectMarketplace(id, request)));
     }
 
+    @PostMapping("/{id}/marketplace/request-changes")
+    public ResponseEntity<ApiResponse<StoreResponse>> requestMarketplaceChanges(
+            @PathVariable @Positive Long id,
+            @Valid @RequestBody com.x.store.dto.ReviewMarketplaceRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(),
+                "Marketplace application returned to the merchant for updates",
+                storeService.requestMarketplaceChanges(id, request)));
+    }
+
     @GetMapping("/marketplace/pending")
     public ResponseEntity<ApiResponse<PageResponse<StoreResponse>>> listPendingMarketplace(
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(),
                 storeService.listPendingMarketplace(page, size)));
+    }
+
+    @GetMapping("/marketplace/needs-changes")
+    public ResponseEntity<ApiResponse<PageResponse<StoreResponse>>> listMarketplaceNeedsChanges(
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "50") @Min(1) @Max(100) int size) {
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(),
+                storeService.listMarketplaceNeedsChanges(page, size)));
     }
 
     @GetMapping

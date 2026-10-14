@@ -8,6 +8,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import com.x.store.dto.StoreOpeningHours;
 
 import java.time.LocalDateTime;
 import java.math.BigDecimal;
@@ -89,6 +92,10 @@ public class Store {
     @Column(name = "marketplace_status", length = 32)
     @Builder.Default
     private String marketplaceStatus = "NOT_LISTED";
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "opening_hours", columnDefinition = "json")
+    private StoreOpeningHours openingHours;
 
     @Column(name = "marketplace_applied_at")
     private LocalDateTime marketplaceAppliedAt;

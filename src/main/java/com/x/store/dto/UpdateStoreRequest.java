@@ -24,7 +24,9 @@ public record UpdateStoreRequest(
         BigDecimal latitude,
         BigDecimal longitude,
         List<@jakarta.validation.Valid StoreImageRequest> images,
-        Integer status) {
+        Integer status,
+        @jakarta.validation.Valid StoreOpeningHours openingHours,
+        Boolean clearOpeningHours) {
 
     public UpdateStoreRequest(String name, String code, String addressLine1, String addressLine2,
                               String landmark, String city, String stateProvince, String countryCode,
@@ -32,6 +34,7 @@ public record UpdateStoreRequest(
                               String website, BigDecimal latitude, BigDecimal longitude,
                               List<StoreImageRequest> images, Integer status) {
         this(name, code, null, addressLine1, addressLine2, landmark, city, stateProvince,
-                countryCode, postalCode, phone, alternatePhone, email, website, latitude, longitude, images, status);
+                countryCode, postalCode, phone, alternatePhone, email, website, latitude, longitude, images, status,
+                null, false);
     }
 }

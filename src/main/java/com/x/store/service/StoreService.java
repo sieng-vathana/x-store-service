@@ -21,6 +21,11 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 import java.util.Collection;
 import java.util.Locale;
+import java.time.DayOfWeek;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
+import java.util.EnumSet;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 
@@ -63,6 +68,7 @@ public class StoreService {
                 .website(trimToNull(request.website()))
                 .latitude(request.latitude())
                 .longitude(request.longitude())
+                .openingHours(validateOpeningHours(request.openingHours()))
                 .status(ACTIVE_STATUS)
                 .build();
         prepareImages(store, request.images());
@@ -130,6 +136,11 @@ public class StoreService {
         if (request.status() != null) {
             store.setStatus(request.status());
         }
+        if (Boolean.TRUE.equals(request.clearOpeningHours())) {
+            store.setOpeningHours(null);
+        } else if (request.openingHours() != null) {
+            store.setOpeningHours(validateOpeningHours(request.openingHours()));
+        }
         if (request.storeType() != null && !request.storeType().isBlank()) {
             store.setStoreType(request.storeType().trim().toUpperCase(Locale.ROOT));
         }
@@ -149,9 +160,16 @@ public class StoreService {
     public StoreResponse applyMarketplace(Long id, com.x.store.dto.ApplyMarketplaceRequest request) {
         Store store = storeRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));
+        if ("APPROVED".equalsIgnoreCase(store.getMarketplaceStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Store is already approved for the marketplace");
+        }
+        if ("PENDING_REVIEW".equalsIgnoreCase(store.getMarketplaceStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Marketplace application is already under review");
+        }
         if (request != null && request.storeType() != null && !request.storeType().isBlank()) {
             store.setStoreType(request.storeType().trim().toUpperCase(Locale.ROOT));
         }
+        requireMarketplaceReadiness(store);
         store.setMarketplaceStatus("PENDING_REVIEW");
         store.setMarketplaceAppliedAt(java.time.LocalDateTime.now());
         store.setRejectionReason(null);
@@ -166,6 +184,10 @@ public class StoreService {
     public StoreResponse approveMarketplace(Long id) {
         Store store = storeRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));
+        if (!"PENDING_REVIEW".equalsIgnoreCase(store.getMarketplaceStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Only applications awaiting review can be approved");
+        }
+        requireMarketplaceReadiness(store);
         store.setMarketplaceStatus("APPROVED");
         store.setMarketplaceApprovedAt(java.time.LocalDateTime.now());
         store.setRejectionReason(null);
@@ -185,12 +207,89 @@ public class StoreService {
         return toResponse(storeRepository.save(store));
     }
 
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheNames.STORE_BY_ID, key = "#id"),
+            @CacheEvict(cacheNames = CacheNames.STORES_BY_BUSINESS, allEntries = true)
+    })
+    @Transactional
+    public StoreResponse requestMarketplaceChanges(Long id, com.x.store.dto.ReviewMarketplaceRequest request) {
+        Store store = storeRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));
+        if (!"PENDING_REVIEW".equalsIgnoreCase(store.getMarketplaceStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Only applications awaiting review can be returned for changes");
+        }
+        String reason = request == null ? null : trimToNull(request.reason());
+        if (reason == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Explain what the merchant needs to update");
+        }
+        store.setMarketplaceStatus("NEEDS_CHANGES");
+        store.setRejectionReason(reason);
+        return toResponse(storeRepository.save(store));
+    }
+
     @Transactional(readOnly = true)
     public PageResponse<StoreResponse> listPendingMarketplace(int page, int size) {
         var stores = storeRepository.findAllByMarketplaceStatus("PENDING_REVIEW",
                 PageRequest.of(page, size, Sort.by("marketplaceAppliedAt").ascending()));
         return new PageResponse<>(stores.getContent().stream().map(this::toResponse).toList(),
                 stores.getNumber(), stores.getSize(), stores.getTotalElements(), stores.getTotalPages(), stores.hasNext());
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<StoreResponse> listMarketplaceNeedsChanges(int page, int size) {
+        var stores = storeRepository.findAllByMarketplaceStatus("NEEDS_CHANGES",
+                PageRequest.of(page, size, Sort.by("updatedAt").descending()));
+        return new PageResponse<>(stores.getContent().stream().map(this::toResponse).toList(),
+                stores.getNumber(), stores.getSize(), stores.getTotalElements(), stores.getTotalPages(), stores.hasNext());
+    }
+
+    private void requireMarketplaceReadiness(Store store) {
+        var missing = new java.util.ArrayList<String>();
+        if (isBlank(store.getName()) || isBlank(store.getStoreType())) missing.add("Store name and type");
+        if (isBlank(store.getPhone()) && isBlank(store.getEmail())) missing.add("Contact phone or email");
+        if (isBlank(store.getAddressLine1()) || isBlank(store.getCity())
+                || isBlank(store.getStateProvince()) || isBlank(store.getCountryCode())) {
+            missing.add("Full address (street, city, province, and country)");
+        }
+        if (!hasCompleteOpeningHours(store.getOpeningHours())) missing.add("Weekly opening hours");
+        if (store.getImages() == null || store.getImages().stream().noneMatch(image -> !isBlank(image.getImageUrl()))) {
+            missing.add("Storefront photo");
+        }
+        if (!missing.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Marketplace listing is missing: " + String.join(", ", missing));
+        }
+    }
+
+    private boolean hasCompleteOpeningHours(com.x.store.dto.StoreOpeningHours hours) {
+        if (hours == null || hours.timeZone() == null || !"Asia/Phnom_Penh".equals(hours.timeZone().trim()) || hours.days() == null
+                || !hours.days().keySet().equals(EnumSet.allOf(DayOfWeek.class))) {
+            return false;
+        }
+        boolean hasOpenDay = false;
+        for (DayOfWeek day : DayOfWeek.values()) {
+            var schedule = hours.days().get(day);
+            if (schedule == null) return false;
+            if (schedule.closed()) continue;
+            hasOpenDay = true;
+            if (!isValidMarketplaceTime(schedule.openTime()) || !isValidMarketplaceTime(schedule.closeTime())
+                    || schedule.openTime().equals(schedule.closeTime())) return false;
+        }
+        return hasOpenDay;
+    }
+
+    private boolean isValidMarketplaceTime(String value) {
+        if (value == null || !value.matches("(?:[01]\\d|2[0-3]):[0-5]\\d")) return false;
+        try {
+            LocalTime.parse(value);
+            return true;
+        } catch (DateTimeParseException exception) {
+            return false;
+        }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     @Caching(evict = {
@@ -229,7 +328,8 @@ public class StoreService {
                                 .orElseGet(() -> store.getImages().stream()
                                         .map(StoreImage::getImageUrl)
                                         .findFirst()
-                                        .orElse(null))))
+                                        .orElse(null)),
+                        store.getOpeningHours()))
                 .toList();
     }
 
@@ -289,6 +389,49 @@ public class StoreService {
                         .toList(), store.getStatus(),
                 store.getMarketplaceStatus() != null ? store.getMarketplaceStatus() : "NOT_LISTED",
                 store.getMarketplaceAppliedAt(), store.getMarketplaceApprovedAt(), store.getRejectionReason(),
-                store.getCreatedAt(), store.getUpdatedAt());
+                store.getCreatedAt(), store.getUpdatedAt(), store.getOpeningHours());
+    }
+
+    private com.x.store.dto.StoreOpeningHours validateOpeningHours(com.x.store.dto.StoreOpeningHours hours) {
+        if (hours == null) {
+            return null;
+        }
+        if (hours.timeZone() == null || hours.timeZone().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Opening hours time zone is required");
+        }
+        try {
+            ZoneId.of(hours.timeZone());
+        } catch (Exception exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Opening hours time zone is invalid");
+        }
+        if (hours.days() == null || !hours.days().keySet().equals(EnumSet.allOf(DayOfWeek.class))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Opening hours must include all seven days");
+        }
+        for (DayOfWeek day : DayOfWeek.values()) {
+            var schedule = hours.days().get(day);
+            if (schedule == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Opening hours schedule is missing for " + day);
+            }
+            if (schedule.closed()) {
+                continue;
+            }
+            validateTime(schedule.openTime(), day);
+            validateTime(schedule.closeTime(), day);
+            if (schedule.openTime().equals(schedule.closeTime())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Opening and closing times must differ for " + day);
+            }
+        }
+        return hours;
+    }
+
+    private void validateTime(String time, DayOfWeek day) {
+        if (time == null || !time.matches("(?:[01]\\d|2[0-3]):[0-5]\\d")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Use a valid HH:mm time for " + day);
+        }
+        try {
+            LocalTime.parse(time);
+        } catch (DateTimeParseException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Use a valid HH:mm time for " + day);
+        }
     }
 }
