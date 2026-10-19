@@ -176,6 +176,66 @@ public class StoreService {
         return toResponse(storeRepository.save(store));
     }
 
+    /** Every store for the platform backoffice; filter "suspended" or "active", search by name, code or city. */
+    @Transactional(readOnly = true)
+    public List<StoreResponse> listForAdmin(Long businessId, String filter, String search) {
+        String query = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
+        String wanted = filter == null ? "" : filter.trim().toLowerCase(Locale.ROOT);
+        return storeRepository.findAll(Sort.by("createdAt").descending()).stream()
+                .filter(store -> businessId == null || businessId.equals(store.getBusinessId()))
+                .filter(store -> switch (wanted) {
+                    case "suspended" -> store.getSuspendedAt() != null;
+                    case "active" -> store.getSuspendedAt() == null;
+                    default -> true;
+                })
+                .filter(store -> query.isEmpty()
+                        || store.getName().toLowerCase(Locale.ROOT).contains(query)
+                        || store.getCode().toLowerCase(Locale.ROOT).contains(query)
+                        || (store.getCity() != null && store.getCity().toLowerCase(Locale.ROOT).contains(query)))
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheNames.STORE_BY_ID, key = "#id"),
+            @CacheEvict(cacheNames = CacheNames.STORES_BY_BUSINESS, allEntries = true)
+    })
+    @Transactional
+    public StoreResponse suspend(Long id, Long actorUserId, String reason) {
+        if (reason == null || reason.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A suspension reason is required");
+        }
+        Store store = findStore(id);
+        if (store.getSuspendedAt() != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This store is already suspended");
+        }
+        store.setSuspendedAt(java.time.LocalDateTime.now());
+        store.setSuspensionReason(reason.trim());
+        store.setSuspendedByUserId(actorUserId);
+        return toResponse(storeRepository.save(store));
+    }
+
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheNames.STORE_BY_ID, key = "#id"),
+            @CacheEvict(cacheNames = CacheNames.STORES_BY_BUSINESS, allEntries = true)
+    })
+    @Transactional
+    public StoreResponse reinstate(Long id) {
+        Store store = findStore(id);
+        if (store.getSuspendedAt() == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This store is not suspended");
+        }
+        store.setSuspendedAt(null);
+        store.setSuspensionReason(null);
+        store.setSuspendedByUserId(null);
+        return toResponse(storeRepository.save(store));
+    }
+
+    private Store findStore(Long id) {
+        return storeRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));
+    }
+
     @Caching(evict = {
             @CacheEvict(cacheNames = CacheNames.STORE_BY_ID, key = "#id"),
             @CacheEvict(cacheNames = CacheNames.STORES_BY_BUSINESS, allEntries = true)
@@ -316,6 +376,7 @@ public class StoreService {
         }
         return storeRepository.findAllById(ids).stream()
                 .filter(store -> (store.getStatus() == null || store.getStatus() == ACTIVE_STATUS)
+                        && store.getSuspendedAt() == null
                         && "APPROVED".equalsIgnoreCase(store.getMarketplaceStatus()))
                 .map(store -> new com.x.store.dto.MarketplaceStoreResponse(
                         store.getId(), store.getName(), store.getCode(),
@@ -329,7 +390,7 @@ public class StoreService {
                                         .map(StoreImage::getImageUrl)
                                         .findFirst()
                                         .orElse(null)),
-                        store.getOpeningHours()))
+                        store.getOpeningHours(), store.getBusinessId()))
                 .toList();
     }
 
@@ -389,7 +450,8 @@ public class StoreService {
                         .toList(), store.getStatus(),
                 store.getMarketplaceStatus() != null ? store.getMarketplaceStatus() : "NOT_LISTED",
                 store.getMarketplaceAppliedAt(), store.getMarketplaceApprovedAt(), store.getRejectionReason(),
-                store.getCreatedAt(), store.getUpdatedAt(), store.getOpeningHours());
+                store.getCreatedAt(), store.getUpdatedAt(), store.getOpeningHours(),
+                store.getSuspendedAt(), store.getSuspensionReason(), store.getSuspendedByUserId());
     }
 
     private com.x.store.dto.StoreOpeningHours validateOpeningHours(com.x.store.dto.StoreOpeningHours hours) {

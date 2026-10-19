@@ -106,6 +106,16 @@ public class Store {
     @Column(name = "rejection_reason", length = 500)
     private String rejectionReason;
 
+    /** Set while the platform has suspended this store; the merchant cannot change it. */
+    @Column(name = "suspended_at")
+    private LocalDateTime suspendedAt;
+
+    @Column(name = "suspension_reason", length = 1000)
+    private String suspensionReason;
+
+    @Column(name = "suspended_by_user_id")
+    private Long suspendedByUserId;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

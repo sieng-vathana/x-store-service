@@ -112,6 +112,28 @@ public class StoreController {
                 storeService.listMarketplaceNeedsChanges(page, size)));
     }
 
+    /** All stores for the platform backoffice; status is "suspended" or "active". */
+    @GetMapping("/admin")
+    public ResponseEntity<ApiResponse<List<StoreResponse>>> listForAdmin(
+            @RequestParam(required = false) @Positive Long businessId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String search) {
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), storeService.listForAdmin(businessId, status, search)));
+    }
+
+    @PostMapping("/{id}/suspension")
+    public ResponseEntity<ApiResponse<StoreResponse>> suspend(
+            @PathVariable @Positive Long id, @RequestParam @Positive Long actorUserId,
+            @Valid @RequestBody com.x.store.dto.ReviewMarketplaceRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "Store suspended",
+                storeService.suspend(id, actorUserId, request.reason())));
+    }
+
+    @DeleteMapping("/{id}/suspension")
+    public ResponseEntity<ApiResponse<StoreResponse>> reinstate(@PathVariable @Positive Long id) {
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "Store reinstated", storeService.reinstate(id)));
+    }
+
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<StoreResponse>>> getByBusiness(
             @RequestParam @Positive Long businessId,

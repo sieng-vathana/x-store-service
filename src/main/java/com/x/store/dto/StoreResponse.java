@@ -30,7 +30,16 @@ public record StoreResponse(
         String rejectionReason,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
-        StoreOpeningHours openingHours) {
+        StoreOpeningHours openingHours,
+        LocalDateTime suspendedAt,
+        String suspensionReason,
+        Long suspendedByUserId) {
+
+    /** Suspended by the platform: no sales or marketplace listing until reinstated. */
+    @com.fasterxml.jackson.annotation.JsonProperty("suspended")
+    public boolean suspended() {
+        return suspendedAt != null;
+    }
 
     public StoreResponse(Long id, Long businessId, String name, String code,
                          String addressLine1, String addressLine2, String landmark,
@@ -42,6 +51,6 @@ public record StoreResponse(
         this(id, businessId, name, code, "GENERAL_RETAIL", addressLine1, addressLine2,
              landmark, city, stateProvince, countryCode, postalCode, phone, alternatePhone,
              email, website, latitude, longitude, images, status, "NOT_LISTED",
-             null, null, null, createdAt, updatedAt, null);
+             null, null, null, createdAt, updatedAt, null, null, null, null);
     }
 }

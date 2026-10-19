@@ -68,4 +68,26 @@ class StoreServiceTest {
         assertEquals(true, response.images().get(0).isPrimary());
         assertEquals(false, response.images().get(1).isPrimary());
     }
+
+    @Test
+    void suspendedStoreLeavesTheMarketplaceUntilReinstated() {
+        StoreRepository repository = mock(StoreRepository.class);
+        Store store = Store.builder().id(7L).businessId(2L).name("Riverside").code("RIV").status(1)
+                .marketplaceStatus("APPROVED").images(new java.util.ArrayList<>()).build();
+        when(repository.findById(7L)).thenReturn(java.util.Optional.of(store));
+        when(repository.findAllById(any())).thenReturn(List.of(store));
+        when(repository.save(any(Store.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        StoreService service = new StoreService(repository);
+
+        org.junit.jupiter.api.Assertions.assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> service.suspend(7L, 9L, " "));
+        var suspended = service.suspend(7L, 9L, "Selling counterfeit goods");
+        assertEquals(true, suspended.suspended());
+        assertEquals("Selling counterfeit goods", suspended.suspensionReason());
+        assertEquals(List.of(), service.getMarketplaceStores(List.of(7L)));
+
+        var reinstated = service.reinstate(7L);
+        assertEquals(false, reinstated.suspended());
+        assertEquals(1, service.getMarketplaceStores(List.of(7L)).size());
+    }
 }
