@@ -54,6 +54,7 @@ public class StoreService {
                 .name(request.name().trim())
                 .code(code)
                 .storeType(storeType)
+                .salesChannel(normalizeSalesChannel(request.salesChannel()))
                 .marketplaceStatus("NOT_LISTED")
                 .addressLine1(request.addressLine1().trim())
                 .addressLine2(trimToNull(request.addressLine2()))
@@ -144,6 +145,16 @@ public class StoreService {
         if (request.storeType() != null && !request.storeType().isBlank()) {
             store.setStoreType(request.storeType().trim().toUpperCase(Locale.ROOT));
         }
+        if (request.salesChannel() != null && !request.salesChannel().isBlank()) {
+            String salesChannel = normalizeSalesChannel(request.salesChannel());
+            store.setSalesChannel(salesChannel);
+            if ("POS".equals(salesChannel)) {
+                store.setMarketplaceStatus("NOT_LISTED");
+                store.setMarketplaceAppliedAt(null);
+                store.setMarketplaceApprovedAt(null);
+                store.setRejectionReason(null);
+            }
+        }
         if (request.images() != null) {
             store.getImages().clear();
             prepareImages(store, request.images());
@@ -160,6 +171,10 @@ public class StoreService {
     public StoreResponse applyMarketplace(Long id, com.x.store.dto.ApplyMarketplaceRequest request) {
         Store store = storeRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));
+        if (!supportsOnline(store.getSalesChannel())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Online marketplace listing requires an Online-only or POS + Online store");
+        }
         if ("APPROVED".equalsIgnoreCase(store.getMarketplaceStatus())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Store is already approved for the marketplace");
         }
@@ -377,6 +392,7 @@ public class StoreService {
         return storeRepository.findAllById(ids).stream()
                 .filter(store -> (store.getStatus() == null || store.getStatus() == ACTIVE_STATUS)
                         && store.getSuspendedAt() == null
+                        && supportsOnline(store.getSalesChannel())
                         && "APPROVED".equalsIgnoreCase(store.getMarketplaceStatus()))
                 .map(store -> new com.x.store.dto.MarketplaceStoreResponse(
                         store.getId(), store.getName(), store.getCode(),
@@ -451,7 +467,22 @@ public class StoreService {
                 store.getMarketplaceStatus() != null ? store.getMarketplaceStatus() : "NOT_LISTED",
                 store.getMarketplaceAppliedAt(), store.getMarketplaceApprovedAt(), store.getRejectionReason(),
                 store.getCreatedAt(), store.getUpdatedAt(), store.getOpeningHours(),
-                store.getSuspendedAt(), store.getSuspensionReason(), store.getSuspendedByUserId());
+                store.getSuspendedAt(), store.getSuspensionReason(), store.getSuspendedByUserId(),
+                normalizeSalesChannel(store.getSalesChannel()));
+    }
+
+    private String normalizeSalesChannel(String value) {
+        if (value == null || value.isBlank()) return "BOTH";
+        String channel = value.trim().toUpperCase(Locale.ROOT);
+        if (!List.of("POS", "ONLINE", "BOTH").contains(channel)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sales channel must be POS, ONLINE, or BOTH");
+        }
+        return channel;
+    }
+
+    private boolean supportsOnline(String value) {
+        String channel = normalizeSalesChannel(value);
+        return "ONLINE".equals(channel) || "BOTH".equals(channel);
     }
 
     private com.x.store.dto.StoreOpeningHours validateOpeningHours(com.x.store.dto.StoreOpeningHours hours) {

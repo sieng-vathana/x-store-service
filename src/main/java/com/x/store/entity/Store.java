@@ -89,6 +89,11 @@ public class Store {
     @Builder.Default
     private String storeType = "GENERAL_RETAIL";
 
+    /** Enabled sales surfaces for this store. Existing stores continue to support both. */
+    @Column(name = "sales_channel", length = 16)
+    @Builder.Default
+    private String salesChannel = "BOTH";
+
     @Column(name = "marketplace_status", length = 32)
     @Builder.Default
     private String marketplaceStatus = "NOT_LISTED";

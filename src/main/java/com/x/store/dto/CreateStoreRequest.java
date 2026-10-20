@@ -17,6 +17,7 @@ public record CreateStoreRequest(
         @NotBlank(message = "Store code is required")
         @Size(max = 64, message = "Store code must not exceed 64 characters") String code,
         @Size(max = 64, message = "Store type must not exceed 64 characters") String storeType,
+        @Pattern(regexp = "(?i)POS|ONLINE|BOTH", message = "Sales channel must be POS, ONLINE, or BOTH") String salesChannel,
         @NotBlank(message = "Address line 1 is required")
         @Size(max = 255, message = "Address line 1 must not exceed 255 characters") String addressLine1,
         @Size(max = 255, message = "Address line 2 must not exceed 255 characters") String addressLine2,
@@ -41,7 +42,18 @@ public record CreateStoreRequest(
                               String countryCode, String postalCode, String phone, String alternatePhone,
                               String email, String website, BigDecimal latitude, BigDecimal longitude,
                               List<StoreImageRequest> images) {
-        this(businessId, name, code, null, addressLine1, addressLine2, landmark, city, stateProvince,
+        this(businessId, name, code, null, null, addressLine1, addressLine2, landmark, city, stateProvince,
                 countryCode, postalCode, phone, alternatePhone, email, website, latitude, longitude, images, null);
+    }
+
+    /** Keeps the pre-channel request constructor compatible with internal callers. */
+    public CreateStoreRequest(Long businessId, String name, String code, String storeType,
+                              String addressLine1, String addressLine2, String landmark, String city,
+                              String stateProvince, String countryCode, String postalCode, String phone,
+                              String alternatePhone, String email, String website, BigDecimal latitude,
+                              BigDecimal longitude, List<StoreImageRequest> images,
+                              StoreOpeningHours openingHours) {
+        this(businessId, name, code, storeType, null, addressLine1, addressLine2, landmark, city, stateProvince,
+                countryCode, postalCode, phone, alternatePhone, email, website, latitude, longitude, images, openingHours);
     }
 }
