@@ -394,7 +394,37 @@ public class StoreService {
                         && store.getSuspendedAt() == null
                         && supportsOnline(store.getSalesChannel())
                         && "APPROVED".equalsIgnoreCase(store.getMarketplaceStatus()))
-                .map(store -> new com.x.store.dto.MarketplaceStoreResponse(
+                .map(this::toMarketplaceStore)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public com.x.store.dto.MarketplaceStoreResponse getMarketplaceStore(Long id) {
+        Store store = storeRepository.findById(id)
+                .filter(this::isMarketplaceVisible)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Marketplace store not found"));
+        return toMarketplaceStore(store);
+    }
+
+    private boolean isMarketplaceVisible(Store store) {
+        return (store.getStatus() == null || store.getStatus() == ACTIVE_STATUS)
+                && store.getSuspendedAt() == null
+                && supportsOnline(store.getSalesChannel())
+                && "APPROVED".equalsIgnoreCase(store.getMarketplaceStatus());
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<com.x.store.dto.MarketplaceStoreResponse> getMarketplaceDirectory(
+            String search, int page, int size) {
+        var stores = storeRepository.findMarketplaceDirectory(
+                search == null || search.isBlank() ? null : search.trim(),
+                PageRequest.of(page, size, Sort.by("id").ascending()));
+        return new PageResponse<>(stores.getContent().stream().map(this::toMarketplaceStore).toList(),
+                stores.getNumber(), stores.getSize(), stores.getTotalElements(), stores.getTotalPages(), stores.hasNext());
+    }
+
+    private com.x.store.dto.MarketplaceStoreResponse toMarketplaceStore(Store store) {
+        return new com.x.store.dto.MarketplaceStoreResponse(
                         store.getId(), store.getName(), store.getCode(),
                         store.getStoreType() != null ? store.getStoreType() : "GENERAL_RETAIL",
                         store.getCity(), store.getCountryCode(),
@@ -406,8 +436,7 @@ public class StoreService {
                                         .map(StoreImage::getImageUrl)
                                         .findFirst()
                                         .orElse(null)),
-                        store.getOpeningHours(), store.getBusinessId()))
-                .toList();
+                        store.getOpeningHours(), store.getBusinessId());
     }
 
     @Cacheable(

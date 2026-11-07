@@ -65,6 +65,21 @@ public class StoreController {
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), storeService.getMarketplaceStores(ids)));
     }
 
+    @GetMapping("/public/{id}")
+    public ResponseEntity<ApiResponse<com.x.store.dto.MarketplaceStoreResponse>> getMarketplaceStore(
+            @PathVariable @Positive Long id) {
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), storeService.getMarketplaceStore(id)));
+    }
+
+    @GetMapping("/public/directory")
+    public ResponseEntity<ApiResponse<PageResponse<com.x.store.dto.MarketplaceStoreResponse>>> getMarketplaceDirectory(
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "24") @Min(1) @Max(100) int size) {
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(),
+                storeService.getMarketplaceDirectory(search, page, size)));
+    }
+
     @PostMapping("/{id}/marketplace/apply")
     public ResponseEntity<ApiResponse<StoreResponse>> applyMarketplace(
             @PathVariable @Positive Long id,
